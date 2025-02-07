@@ -68,4 +68,33 @@ public class TokenHelper : ITokenHelper
         await _userManager.SetAuthenticationTokenAsync(user, "MyApp", "RefreshToken", newRefreshToken);
         return newRefreshToken;
     }
+    public ClaimsPrincipal? GetPrincipalFromExpiredToken(string token)
+    {
+        var jwtSettings = _configuration.GetSection("JwtSettings");
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var validationParameters = new TokenValidationParameters
+        {
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["SecretKey"])), 
+            ValidateIssuer = false,  
+            ValidateAudience = false, 
+            ValidateLifetime = false, 
+            ClockSkew = TimeSpan.Zero
+        };
+        try
+        {
+            var principal = tokenHandler.ValidateToken(token, validationParameters, out var securityToken);
+            if (securityToken is not JwtSecurityToken jwtSecurityToken ||
+                !jwtSecurityToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.InvariantCultureIgnoreCase))
+            {
+                return null;
+            }
+            return principal;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
 }

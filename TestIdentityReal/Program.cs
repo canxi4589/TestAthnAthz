@@ -3,6 +3,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
 using TestIdentityReal.Extensions;
+using TestIdentityReal.Service;
 
 var builder = WebApplication.CreateBuilder(args);
 var config = builder.Configuration;
@@ -12,6 +13,8 @@ var config = builder.Configuration;
 builder.Services.AddControllers();
 builder.Services.AddDatabaseConfig(config);
 builder.Services.AddIdentityService(config);
+builder.Services.AddBlobService(config);
+
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 
 builder.Services.AddEndpointsApiExplorer();
@@ -69,6 +72,7 @@ builder.Services.AddAuthentication(options =>
             IssuerSigningKey = new SymmetricSecurityKey(secretKey)
         };
     });
+    
 
 builder.Services.AddCors(options =>
 {
@@ -81,6 +85,9 @@ builder.Services.AddCors(options =>
 });
 builder.Services.AddScoped<ITokenHelper,TokenHelper>();
 builder.Services.AddScoped<IEmailSender, EmailSender>();
+builder.Services.AddScoped<IFileService, FileService>();
+builder.Services.AddSingleton<BlobStorageService>();
+
 var app = builder.Build();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
