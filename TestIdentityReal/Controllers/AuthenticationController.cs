@@ -206,6 +206,7 @@ namespace TestIdentityReal.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto model)
         {
+            
             var user = await _userManager.FindByEmailAsync(model.Email);
             if (user == null || !await _userManager.CheckPasswordAsync(user, model.Password))
                 return Unauthorized(new AppResponse<object>().SetErrorResponse("Credentials", "Invalid credentials."));
@@ -220,6 +221,26 @@ namespace TestIdentityReal.Controllers
             var refreshToken = await _tokenHelper.GenerateRefreshToken(user);
 
             return Ok(new AppResponse<object>().SetSuccessResponse(new { AccessToken = accessToken, RefreshToken = refreshToken,Role = role }));
+        }
+        [HttpPost("loginTest")]
+        public async Task<IActionResult> Login1([FromBody] LoginDto model)
+        {
+            model.Email = "customer1@example.com";
+            model.Password = "123"; 
+            var user = await _userManager.FindByEmailAsync(model.Email);
+            if (user == null || !await _userManager.CheckPasswordAsync(user, model.Password))
+                return Unauthorized(new AppResponse<object>().SetErrorResponse("Credentials", "Invalid credentials."));
+
+            if (!await _userManager.IsEmailConfirmedAsync(user))
+                return Unauthorized(new AppResponse<object>().SetErrorResponse("Email", "Email not confirmed."));
+
+            var roles = await _userManager.GetRolesAsync(user);
+            var role = roles.FirstOrDefault();
+
+            var accessToken = _tokenHelper.GenerateJwtToken(user, role);
+            var refreshToken = await _tokenHelper.GenerateRefreshToken(user);
+
+            return Ok(new AppResponse<object>().SetSuccessResponse(new { AccessToken = accessToken, RefreshToken = refreshToken, Role = role }));
         }
         [HttpGet("confirm-email")]
         public async Task<IActionResult> ConfirmEmail(string userId, string token)
