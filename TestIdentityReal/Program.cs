@@ -97,6 +97,8 @@ if (app.Environment.IsDevelopment())
 }
 await app.AddAutoMigrateAndSeedDatabase();
 
+app.UseCors("AllowAnyOrigin");
+
 app.UseHttpsRedirection();
 
 app.UseAuthorization();

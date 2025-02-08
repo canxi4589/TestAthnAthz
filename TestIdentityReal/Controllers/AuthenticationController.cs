@@ -219,7 +219,7 @@ namespace TestIdentityReal.Controllers
             var accessToken = _tokenHelper.GenerateJwtToken(user, role);
             var refreshToken = await _tokenHelper.GenerateRefreshToken(user);
 
-            return Ok(new AppResponse<object>().SetSuccessResponse(new { AccessToken = accessToken, RefreshToken = refreshToken }));
+            return Ok(new AppResponse<object>().SetSuccessResponse(new { AccessToken = accessToken, RefreshToken = refreshToken,Role = role }));
         }
         [HttpGet("confirm-email")]
         public async Task<IActionResult> ConfirmEmail(string userId, string token)
@@ -273,7 +273,7 @@ namespace TestIdentityReal.Controllers
             var accessToken = _tokenHelper.GenerateJwtToken(user, role);
             var refreshToken = await _tokenHelper.GenerateRefreshToken(user);
 
-            return Ok(new AppResponse<object>().SetSuccessResponse(new { AccessToken = accessToken, RefreshToken = refreshToken }));
+            return Ok(new AppResponse<object>().SetSuccessResponse(new { AccessToken = accessToken, RefreshToken = refreshToken, Role = role }));
         }
         [HttpPost("refresh-token")]
         public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenDto model)
@@ -295,10 +295,11 @@ namespace TestIdentityReal.Controllers
                 return Unauthorized(new AppResponse<object>().SetErrorResponse("Token", "Invalid refresh token."));
 
             var roles = await _userManager.GetRolesAsync(user);
-            var newAccessToken = _tokenHelper.GenerateJwtToken(user, roles.FirstOrDefault());
+            var role = roles.FirstOrDefault();
+            var newAccessToken = _tokenHelper.GenerateJwtToken(user, role);
             var newRefreshToken = await _tokenHelper.GenerateRefreshToken(user);
 
-            return Ok(new AppResponse<object>().SetSuccessResponse(new { Token = newAccessToken, RefreshToken = newRefreshToken }));
+            return Ok(new AppResponse<object>().SetSuccessResponse(new { Token = newAccessToken, RefreshToken = newRefreshToken, Role = role }));
         }
         [HttpPost("testmail")]
         public async Task<IActionResult> TestMail([FromBody] string email)
