@@ -5,6 +5,7 @@ namespace TestIdentityReal.DTO
     public class RegisterDto
     {
         [Required]
+        [RegularExpression(@"^[a-zA-Z\s]+$", ErrorMessage = "Full Name must contain only letters and spaces.")]
         public string FullName { get; set; }
 
         [Required]
