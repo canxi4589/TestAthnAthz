@@ -168,7 +168,7 @@ namespace TestIdentityReal.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(new AppResponse<object>().SetErrorResponse("ModelState", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToArray()));
 
-            var user = new AppUser { UserName = model.Email, Email = model.Email, PhoneNumber = model.PhoneNumber, FullName = model.FullName };
+            var user = new AppUser { UserName = model.FullName, Email = model.Email, PhoneNumber = model.PhoneNumber, FullName = model.FullName };
             var result = await _userManager.CreateAsync(user, model.Password);
 
             if (result.Succeeded)
