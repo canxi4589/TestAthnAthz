@@ -20,7 +20,7 @@ namespace TestIdentityReal.Controllers
         private readonly ITokenHelper _tokenHelper;
         private readonly IConfiguration _configuration;
         private readonly IEmailSender _emailSender;
-        public string frontendurl = "hehe";
+        public string frontendurl;
         public AuthenticationController(ILogger<WeatherForecastController> logger, UserManager<AppUser> userManager, ITokenHelper tokenHelper, IConfiguration configuration, IEmailSender emailSender)
         {
             _logger = logger;
@@ -28,6 +28,7 @@ namespace TestIdentityReal.Controllers
             _tokenHelper = tokenHelper;
             _configuration = configuration;
             _emailSender = emailSender;
+            frontendurl = configuration["Url:Frontend"] ?? "https://www.youtube.com/";
         }
 
         //[HttpPost("register")]
@@ -179,30 +180,11 @@ namespace TestIdentityReal.Controllers
 
                 await _emailSender.SendEmailAsync(user.Email, "Confirm your email", $"Click <a href='{confirmationLink}'>here</a> to confirm your email.");
 
-                return Ok(new AppResponse<object>().SetSuccessResponse(null, "Message", "Registration successful. Check your email to confirm your account."));
+                return Ok(new AppResponse<object>().SetSuccessResponse(null!, "Message", "Registration successful. Check your email to confirm your account."));
             }
 
             return BadRequest(new AppResponse<object>().SetErrorResponse("IdentityErrors", result.Errors.Select(e => e.Description).ToArray()));
         }
-        //[HttpPost("register-housekeeper")]
-        //public async Task<IActionResult> Register1([FromBody] RegisterHousekeeperDto model)
-        //{
-        //    if (!ModelState.IsValid)
-        //        return BadRequest(new AppResponse<object>().SetErrorResponse("ModelState", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToArray()));
-
-        //    var user = new AppUser { UserName = model.Email, Email = model.Email,
-        //        PhoneNumber = model.PhoneNumber, FullName = model.FullName, PDF = model.Pdf, Avatar = model.Avatar
-        //    };
-        //    var result = await _userManager.CreateAsync(user, model.Password);
-
-        //    if (result.Succeeded)
-        //    {
-
-        //        return Ok(new AppResponse<object>().SetSuccessResponse(null, "Message", "Registration successful. Wait for staff to confirm your shit."));
-        //    }
-
-        //    return BadRequest(new AppResponse<object>().SetErrorResponse("IdentityErrors", result.Errors.Select(e => e.Description).ToArray()));
-        //}
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto model)
         {
@@ -217,7 +199,7 @@ namespace TestIdentityReal.Controllers
             var roles = await _userManager.GetRolesAsync(user);
             var role = roles.FirstOrDefault();
 
-            var accessToken = _tokenHelper.GenerateJwtToken(user, role);
+            var accessToken = _tokenHelper.GenerateJwtToken(user, role!);
             var refreshToken = await _tokenHelper.GenerateRefreshToken(user);
 
             return Ok(new AppResponse<object>().SetSuccessResponse(new { AccessToken = accessToken, RefreshToken = refreshToken,Role = role }));
@@ -237,7 +219,7 @@ namespace TestIdentityReal.Controllers
             var roles = await _userManager.GetRolesAsync(user);
             var role = roles.FirstOrDefault();
 
-            var accessToken = _tokenHelper.GenerateJwtToken(user, role);
+            var accessToken = _tokenHelper.GenerateJwtToken(user, role!);
             var refreshToken = await _tokenHelper.GenerateRefreshToken(user);
 
             return Ok(new AppResponse<object>().SetSuccessResponse(new { AccessToken = accessToken, RefreshToken = refreshToken, Role = role }));
@@ -253,14 +235,14 @@ namespace TestIdentityReal.Controllers
             if (!result.Succeeded)
                 return BadRequest(new AppResponse<object>().SetErrorResponse("EmailConfirmation", "Email confirmation failed."));
 
-            return Ok(new AppResponse<object>().SetSuccessResponse(null, "Message", "Email confirmed successfully."));
+            return Ok(new AppResponse<object>().SetSuccessResponse(null!, "Message", "Email confirmed successfully."));
         }
         [HttpPost("signin-google")]
         public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginDto model)
         {
             var settings = new GoogleJsonWebSignature.ValidationSettings()
             {
-                Audience = new List<string> { _configuration["GoogleAuth:ClientId"] }
+                Audience = new List<string> { _configuration["GoogleAuth:ClientId"]! }
             };
 
             GoogleJsonWebSignature.Payload payload;
@@ -291,7 +273,7 @@ namespace TestIdentityReal.Controllers
             }
 
             var role = (await _userManager.GetRolesAsync(user)).FirstOrDefault();
-            var accessToken = _tokenHelper.GenerateJwtToken(user, role);
+            var accessToken = _tokenHelper.GenerateJwtToken(user, role!);
             var refreshToken = await _tokenHelper.GenerateRefreshToken(user);
 
             return Ok(new AppResponse<object>().SetSuccessResponse(new { AccessToken = accessToken, RefreshToken = refreshToken, Role = role }));
@@ -317,25 +299,62 @@ namespace TestIdentityReal.Controllers
 
             var roles = await _userManager.GetRolesAsync(user);
             var role = roles.FirstOrDefault();
-            var newAccessToken = _tokenHelper.GenerateJwtToken(user, role);
+            var newAccessToken = _tokenHelper.GenerateJwtToken(user, role!);
             var newRefreshToken = await _tokenHelper.GenerateRefreshToken(user);
 
             return Ok(new AppResponse<object>().SetSuccessResponse(new { Token = newAccessToken, RefreshToken = newRefreshToken, Role = role }));
+        }
+        [HttpPost("resend-confirmation")]
+        public async Task<IActionResult> ResendConfirmationEmail([FromBody] ResendConfirmationDto model)
+        {
+            var user = await _userManager.FindByEmailAsync(model.Email);
+            if (user == null)
+                return BadRequest(new AppResponse<object>().SetErrorResponse("Email", "User not found."));
+
+            if (await _userManager.IsEmailConfirmedAsync(user))
+                return BadRequest(new AppResponse<object>().SetErrorResponse("Email", "Email already confirmed."));
+
+            var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+            var confirmationLink = $"{frontendurl}/confirm-email?userId={user.Id}&token={Uri.EscapeDataString(token)}";
+
+            await _emailSender.SendEmailAsync(user.Email!, "Confirm your email",
+                $"Click <a href='{confirmationLink}'>here</a> to confirm your email.");
+
+            return Ok(new AppResponse<object>().SetSuccessResponse(null!, "Message", "Confirmation email resent successfully."));
+        }
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto model)
+        {
+            var user = await _userManager.FindByEmailAsync(model.Email);
+            if (user == null)
+                return BadRequest(new AppResponse<object>().SetErrorResponse("Email", "User not found."));
+
+            var result = await _userManager.ResetPasswordAsync(user, model.Token, model.NewPassword);
+            if (!result.Succeeded)
+                return BadRequest(new AppResponse<object>().SetErrorResponse("IdentityErrors", result.Errors.Select(e => e.Description).ToArray()));
+
+            return Ok(new AppResponse<object>().SetSuccessResponse(null!, "Message", "Password reset successful."));
+        }
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto model)
+        {
+            var user = await _userManager.FindByEmailAsync(model.Email);
+            if (user == null)
+                return BadRequest(new AppResponse<object>().SetErrorResponse("Email", "User not found."));
+
+            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+            var resetLink = $"{frontendurl}/reset-password?email={Uri.EscapeDataString(user.Email!)}&token={Uri.EscapeDataString(token)}";
+
+            await _emailSender.SendEmailAsync(user.Email!, "Reset Password", $"Click <a href='{resetLink}'>here</a> to reset your password.");
+
+            return Ok(new AppResponse<object>().SetSuccessResponse(null!, "Message", "Password reset link sent to your email."));
         }
         [HttpPost("testmail")]
         public async Task<IActionResult> TestMail([FromBody] string email)
         {
             await _emailSender.SendEmailAsync(email, "Confirm your email", $"Click <a href='https://www.youtube.com/watch?v=pxwm3sqAytE'>here</a> to confirm your email.");
 
-            return Ok(new AppResponse<object>().SetSuccessResponse(null, "Message", "Test email sent successfully."));
-        }
-        [HttpPost("TestClaim")]
-        public async Task<IActionResult> TestClaim([FromBody] RefreshTokenDto1 model)
-        {
-            var principal = _tokenHelper.GetPrincipalFromExpiredToken(model.Token);
-            var userId = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-            return Ok(new AppResponse<object>().SetSuccessResponse(new { UserId = userId }));
+            return Ok(new AppResponse<object>().SetSuccessResponse(null!, "Message", "Test email sent successfully."));
         }
 
 
