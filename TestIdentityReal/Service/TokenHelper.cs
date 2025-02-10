@@ -22,9 +22,10 @@ public class TokenHelper : ITokenHelper
 
         var claims = new List<Claim>
         {
-            new Claim(ClaimTypes.Name, user.UserName),
-            new Claim(ClaimTypes.NameIdentifier, user.Id),
-            new Claim(ClaimTypes.Role, role)
+            new Claim(JwtRegisteredClaimNames.Name, user.FullName),
+            new Claim("Id", user.Id),
+            new Claim("Role", role),
+            new Claim("Email",user.Email!)
         };
 
         var key = new SymmetricSecurityKey(secretKey);
