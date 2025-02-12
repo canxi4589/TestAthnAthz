@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
@@ -56,6 +57,7 @@ builder.Services.Configure<DataProtectionTokenProviderOptions>(options =>
     options.TokenLifespan = TimeSpan.FromMinutes(30); 
 });
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
+var google = builder.Configuration.GetSection("GoogleAuth");
 var secretKey = Encoding.UTF8.GetBytes(jwtSettings["SecretKey"]);
 
 builder.Services.AddAuthentication(options =>
@@ -78,6 +80,12 @@ builder.Services.AddAuthentication(options =>
             IssuerSigningKey = new SymmetricSecurityKey(secretKey)
         };
     });
+    //.AddGoogle(GoogleDefaults.AuthenticationScheme, options =>
+    //{
+    //    options.ClientId = google["ClientId"];
+    //    options.ClientSecret = google["ClientSecret"];
+    //    options.CallbackPath = "/signin-google";
+    //});
 JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
 JwtSecurityTokenHandler.DefaultOutboundClaimTypeMap.Clear();
 

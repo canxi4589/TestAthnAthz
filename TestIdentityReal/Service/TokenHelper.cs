@@ -23,9 +23,9 @@ public class TokenHelper : ITokenHelper
         var claims = new List<Claim>
         {
             new Claim(JwtRegisteredClaimNames.Name, user.FullName),
-            new Claim("Id", user.Id),
-            new Claim("Role", role),
-            new Claim("Email",user.Email!)
+            new Claim("id", user.Id),
+            new Claim("role", role),
+            new Claim("email",user.Email!)
         };
 
         var key = new SymmetricSecurityKey(secretKey);
@@ -39,29 +39,6 @@ public class TokenHelper : ITokenHelper
             signingCredentials: creds);
 
         return new JwtSecurityTokenHandler().WriteToken(token);
-    }
-    public static ClaimsPrincipal GetPrincipalFromExpiredToken(string token, string secretKey, string issuer, string audience)
-    {
-        var tokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidIssuer = issuer,
-            ValidAudience = audience,
-            ValidateLifetime = false, // Don't validate expiration
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey))
-        };
-
-        var tokenHandler = new JwtSecurityTokenHandler();
-        var principal = tokenHandler.ValidateToken(token, tokenValidationParameters, out SecurityToken securityToken);
-
-        if (securityToken is not JwtSecurityToken jwtSecurityToken ||
-            !jwtSecurityToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.InvariantCultureIgnoreCase))
-        {
-            throw new SecurityTokenException("Invalid token");
-        }
-
-        return principal;
     }
     public async Task<string> GenerateRefreshToken(AppUser user)
     {
