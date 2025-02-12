@@ -360,7 +360,7 @@ namespace TestIdentityReal.Controllers
             var newAccessToken = _tokenHelper.GenerateJwtToken(user, role!);
             var newRefreshToken = await _tokenHelper.GenerateRefreshToken(user);
 
-            return Ok(new AppResponse<object>().SetSuccessResponse(new { Token = newAccessToken, RefreshToken = newRefreshToken, Role = role }));
+            return Ok(new AppResponse<object>().SetSuccessResponse(new { AccessToken = newAccessToken, RefreshToken = newRefreshToken }));
         }
         [HttpPost("resend-confirmation")]
         public async Task<IActionResult> ResendConfirmationEmail([FromBody] ResendConfirmationDto model)
